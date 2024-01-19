@@ -22,13 +22,12 @@ detector = pm.poseDetector()
 dir = 0                     # direction (0 = down, 1 = up)
 count = 0                   # number of reps till this point
 max_angle = 0               # running measure of the max angle to this point per rep
-threshold = 10              # minimum degree of limb that counts as a completed rep (at the top)
+threshold = 10              # minimum degree of limb that counts as a completed rep
 
 depth_angles = []           # historical tracking of each rep's max angle
-new_rep = True              # tracker to reset node trace at the start of each rep (if True, will continually draw)
+new_rep = True              # tracker to reset node trace at the start of each rep
 
 
-# run the code as explained in pose_tracking_main
 while True:
     success, img = cap.read()
     if not success:
@@ -36,50 +35,52 @@ while True:
         print(depth_angles)
         break
 
-    detector.findPose(img,False)          # set to False so it only draws the points called out in the module
+    detector.findPose(img,False)         
     lmList = detector.findPosition(img,False)
 
     # if landmarks are detected in the image:
     if len(lmList) != 0:
-        angle = detector.findAngle(img, 24, 26, 28, False)       # get angle of limb, but don't plot
+        angle = detector.findAngle(img, 24, 26, 28, False)      # get angle of limb
         per = np.interp(angle,(10,120),(0,100))                 # determine percent completed of (full) rep
 
         max_angle = max(max_angle, angle)                       # find the maximum angle until this point
-        max_angle = float('{:.2f}'.format(max_angle))           # convert to 2dp
+        max_angle = float('{:.2f}'.format(max_angle))           
 
     # initial conditions at the top of the squat
     if angle < threshold and dir == 1:
         count += 0.5                                        # second half of rep achieved (rep completed)
-        img_save = img.copy()                               # make a copy of the image for saving
-        detector.traceNodeFree(img_save, 24, new_rep)       # ensure node tracking is plotted on the image to save
+        # save stats to output image
+        img_save = img.copy()                               
+        detector.traceNodeFree(img_save, 24, new_rep)       
         cv2.putText(img_save, f'Max angle: {max_angle}', (10, 70),
-            cv2.FONT_HERSHEY_PLAIN, 3, (0, 255, 0), 3)      # print the max angle on the image
-        cv2.imwrite(f"rep_{int(count)}.jpg", img_save)      # save static image of the completed rep with trace
+            cv2.FONT_HERSHEY_PLAIN, 3, (0, 255, 0), 3)      
+        cv2.imwrite(f"rep_{int(count)}.jpg", img_save)      
 
-        dir = 0                                             # reset direction so it knows we're on a new rep
+        dir = 0                                             # rest direction
         max_angle = 0                                       # reset the max angle for the new rep
         new_rep = False                                     # reset the rep tracker
         detector.traceNodeFree(img, 24, new_rep)            # clear the prior rep's node trace
 
-    if angle >= threshold and dir == 0:                     # once passed rep threshold, new rep is triggered
+    if angle >= threshold and dir == 0:                     
         new_rep = True
 
     # establish the base of the squat
-    if angle > threshold and max_angle - angle > 2 and dir == 0:    # if angle drops by 2 degrees below max angle, know that we are on the way up and the max angle has been reached
+    if angle > threshold and max_angle - angle > 2 and dir == 0:    # 2 degrees less max angle implies that max angle has been achieved
         count += 0.5
         dir = 1
-        depth_angles.append(max_angle)                      # append the max angle achieved
+        depth_angles.append(max_angle)                     
 
     if new_rep:
-        detector.traceNodeFree(img, 24, new_rep)            # keep drawing the node whenever new_rep is in effect
-        detector.findAngle(img, 24, 26, 28, True)           # keep plotting the angle as new_rep is true also
+        detector.traceNodeFree(img, 24, new_rep)            # trace the hip position over the course of the rep
+        detector.findAngle(img, 24, 26, 28, True)           # plots the angle in realtime
 
-    cTime = time.perf_counter()
+    # frames per second counter
+    cTime = time.perf_counter()        
     fps = 1 / (cTime - pTime)
     pTime = cTime
 
-    cv2.putText(img, str(int(fps)), (10, 70), cv2.FONT_HERSHEY_PLAIN, 3,(0, 255, 0), 3)         # FPS print
-    cv2.putText(img, str(int(count)), (img.shape[1] - 100, 70), cv2.FONT_HERSHEY_PLAIN, 3, (0, 255, 0), 3)       # rep counter
+    cv2.putText(img, str(int(fps)), (10, 70), cv2.FONT_HERSHEY_PLAIN, 3,(0, 255, 0), 3)                         # FPS display
+    cv2.putText(img, str(int(count)), (img.shape[1] - 100, 70), cv2.FONT_HERSHEY_PLAIN, 3, (0, 255, 0), 3)      # rep counter display
 
     cv2.imshow("Image", img)
     cv2.waitKey(1)
