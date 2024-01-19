@@ -1,5 +1,9 @@
 '''
-Analyse a set of squats: (1) count reps (2) calculate max angle (3) draw trace image of hip track
+Utilises the separate pose_tracking_module file
+Analyse a set of squats to output: 
+(1) number of reps completed 
+(2) max knee angle achieved at base of squat for each rep
+(3) draw a hip trace for each rep
 '''
 
 import cv2
@@ -8,7 +12,7 @@ import time
 import copy
 import pose_tracking_module as pm
 
-cap = cv2.VideoCapture('SprintVids/Muna Squat2.mov')
+cap = cv2.VideoCapture('your_video_file.mov')
 
 pTime = 0
 # create an object of the 'poseDetector' class called 'detector'
